@@ -1,116 +1,90 @@
-
-const express = require('express');
+const express = require("express");
 
 const app = express();
-
-// Middleware to read JSON data
 app.use(express.json());
 
-// Root route for localhost
-app.get('/', (req, res) => {
-    res.json({
-        message: 'Student API is running',
-        endpoints: {
-            students: '/students',
-            studentById: '/students/:id'
-        }
-    });
-});
-
-// Sample student data
-let students = [
-    { id: 1, name: "Bhanu", age: 20, branch: "CSE" },
-    { id: 2, name: "Rahul", age: 21, branch: "ECE" }
+let tasks = [
+    { id: 1, title: "Learn Git", completed: false },
+    { id: 2, title: "Learn Docker", completed: false }
 ];
 
-// 1. GET - Retrieve all students
-app.get('/students', (req, res) => {
-    res.json(students);
+// GET - Retrieve all tasks
+app.get("/tasks", (req, res) => {
+    res.json(tasks);
 });
 
-// GET - Retrieve student by ID
-app.get('/students/:id', (req, res) => {
-    const student = students.find(s => s.id === Number(req.params.id));
+// GET - Retrieve task by ID
+app.get("/tasks/:id", (req, res) => {
+    const task = tasks.find(t => t.id === Number(req.params.id));
 
-    if (!student) {
-        return res.status(404).json({ message: "Student not found" });
+    if (!task) {
+        return res.status(404).json({ message: "Task not found" });
     }
 
-    res.json(student);
+    res.json(task);
 });
 
-// 2. POST - Add a new student
-app.post('/students', (req, res) => {
-    const newStudent = {
-        id: students.length ? Math.max(...students.map(s => s.id)) + 1 : 1,
-        name: req.body.name,
-        age: req.body.age,
-        branch: req.body.branch
+// POST - Create a new task
+app.post("/tasks", (req, res) => {
+    const { title } = req.body;
+
+    if (!title || typeof title !== "string" || !title.trim()) {
+        return res.status(400).json({ message: "Valid title required" });
+    }
+
+    const task = {
+        id: tasks.length ? Math.max(...tasks.map(t => t.id)) + 1 : 1,
+        title: title.trim(),
+        completed: false
     };
 
-    students.push(newStudent);
-
-    res.status(201).json({
-        message: "Student added successfully",
-        student: newStudent
-    });
+    tasks.push(task);
+    res.status(201).json(task);
 });
 
-// 3. PUT - Update complete student details
-app.put('/students/:id', (req, res) => {
-    const id = Number(req.params.id);
+// PATCH - Update a task
+app.patch("/tasks/:id", (req, res) => {
+    const task = tasks.find(t => t.id === Number(req.params.id));
 
-    const index = students.findIndex(s => s.id === id);
+    if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+    }
+
+    if (req.body.title !== undefined) {
+        if (typeof req.body.title !== "string" || !req.body.title.trim()) {
+            return res.status(400).json({ message: "Invalid title" });
+        }
+        task.title = req.body.title.trim();
+    }
+
+    if (req.body.completed !== undefined) {
+        if (typeof req.body.completed !== "boolean") {
+            return res.status(400).json({ message: "Invalid completed value" });
+        }
+        task.completed = req.body.completed;
+    }
+
+    res.json(task);
+});
+
+// DELETE - Delete a task
+app.delete("/tasks/:id", (req, res) => {
+    const index = tasks.findIndex(t => t.id === Number(req.params.id));
 
     if (index === -1) {
-        return res.status(404).json({ message: "Student not found" });
+        return res.status(404).json({ message: "Task not found" });
     }
 
-    students[index] = {
-        id: id,
-        name: req.body.name,
-        age: req.body.age,
-        branch: req.body.branch
-    };
+    tasks.splice(index, 1);
+    res.json({ message: "Task deleted success" });
+});
 
-    res.json({
-        message: "Student updated successfully",
-        student: students[index]
+const PORT = process.env.PORT || 3000;
+
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
     });
-});
+}
 
-// 4. PATCH - Update specific student details
-app.patch('/students/:id', (req, res) => {
-    const student = students.find(s => s.id === Number(req.params.id));
-
-    if (!student) {
-        return res.status(404).json({ message: "Student not found" });
-    }
-
-    Object.assign(student, req.body);
-
-    res.json({
-        message: "Student partially updated",
-        student: student
-    });
-});
-
-// 5. DELETE - Delete a student
-app.delete('/students/:id', (req, res) => {
-    const id = Number(req.params.id);
-
-    const index = students.findIndex(s => s.id === id);
-
-    if (index === -1) {
-        return res.status(404).json({ message: "Student not found" });
-    }
-
-    students.splice(index, 1);
-
-    res.json({ message: "Student deleted successfully" });
-});
-
-// Start server
-app.listen(3000, () => {
-    console.log("Server running at http://localhost:3000");
-});
+module.exports = app;
